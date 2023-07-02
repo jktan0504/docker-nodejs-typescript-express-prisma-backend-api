@@ -1,0 +1,131 @@
+version: '3'
+
+# services
+services:
+
+  # pg_database
+  # pg_database:
+  #   build:
+  #     context: ./database
+  #     dockerfile: Dockerfile
+  #   tty: true
+  #   env_file: .env
+  #   container_name: ${POSTGRES_CONTAINER_NAME}
+  #   ports:
+  #     - ${POSTGRES_PORT}:${POSTGRES_LOCAL_PORT}
+  #   networks:
+  #     mynetwork:
+  #       ipv4_address: ${POSTGRES_IPV4_ADDRESS}
+  #   volumes:
+  #     - db-data:${POSTGRES_DB_PATH}
+
+  # cache
+  cache-redis:
+    image: "redis:alpine"
+    restart: always
+    ports:
+      - 6379:6379
+
+  ## queue
+  queue-redis:
+    image: "redis:alpine"
+    restart: always
+    ports:
+      - 6380:6380
+  
+  # database
+  # database:
+  #   build:
+  #     context: ./database
+  #     dockerfile: Dockerfile
+  #   tty: true
+  #   env_file: .env
+  #   container_name: ${POSTGRES_CONTAINER_NAME}
+  #   ports:
+  #     - ${POSTGRES_PORT}:${POSTGRES_LOCAL_PORT}
+  #   networks:
+  #     mynetwork:
+  #       ipv4_address: ${POSTGRES_IPV4_ADDRESS}
+  #   volumes:
+  #     - db-data:${POSTGRES_DB_PATH}
+  
+  # celeb_api
+  celeb_api:
+    build:
+      context: ./api
+      dockerfile: ./Dockerfile
+    tty: true
+    env_file: .env
+    environment:
+        - TZ=Asia/Kuala_Lumpur
+    depends_on:
+      - cache-redis
+      - queue-redis
+      # - pg_database
+    links:
+      - cache-redis
+      - queue-redis
+      # - pg_database
+    container_name: ${CELEB_API_CONTAINER_NAME}
+    restart: always
+    ports:
+      - ${CELEB_API_PORT}:${CELEB_API_LOCAL_PORT}
+      - ${CELEB_API_DEBUG_PORT}:${CELEB_API_DEBUG_PORT}
+      - ${CELEB_API_SOCKET_PORT}:${CELEB_API_SOCKET_PORT}
+      - ${CELEB_API_METRICS_PORT}:${CELEB_API_METRICS_PORT}
+    networks:
+      mynetwork:
+        ipv4_address: ${CELEB_API_IPV4_ADDRESS}
+    volumes:
+      - ./api:${CELEB_API_WORKIR_PATH}
+      - ${CELEB_API_WORKIR_PATH}/node_modules
+  
+  celebapi_web:
+    build:
+      context: ./celebapi_web
+      dockerfile: Dockerfile
+    hostname: ${CELEB_WEB_CONTAINER_NAME}
+    container_name: ${CELEB_WEB_CONTAINER_NAME}
+    restart: always
+    ports:
+      - ${CELEB_WEB_PORT}:${CELEB_WEB_LOCAL_PORT}
+    depends_on:
+      - celeb_api
+    networks:
+      mynetwork:
+        ipv4_address: ${CELEB_WEB_IPV4_ADDRESS}
+
+  # nginx proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    tty: true
+    env_file: .env
+    hostname: ${NGINX_CONTAINER_NAME}
+    container_name: ${NGINX_CONTAINER_NAME}
+    depends_on:
+      - celeb_api
+      - celebapi_web
+    ports:
+      - ${NGINX_PORT}:${NGINX_LOCAL_PORT}
+      - ${NGINX_CERT_PORT}:${NGINX_LOCAL_CERT_PORT}
+    networks:
+      mynetwork:
+        ipv4_address: ${NGINX_IPV4_ADDRESS}
+    volumes:
+      - ./nginx/config/nginx.conf:${NGINX_CONFIG_PATH}:ro
+
+# network
+networks:
+  mynetwork:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 100.5.0.0/16
+         gateway: 100.5.0.1
+
+# volume
+volumes:
+  db-data:
+    driver: local

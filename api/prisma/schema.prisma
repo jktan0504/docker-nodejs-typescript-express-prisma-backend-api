@@ -1,0 +1,204 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("POSTGRES_DB_URL")
+}
+
+// Models
+
+// Provider
+model Provider {
+    id          String    @id @unique
+    name        String    @unique
+    description String?   @db.VarChar()
+    key         String?   @db.VarChar()
+    secret_key  String?   @db.VarChar()
+    activated   Boolean?  @default(true)
+    created_by  String?   @db.VarChar()
+    updated_by  String?   @db.VarChar()
+    created_at  DateTime? @default(now())
+    updated_at  DateTime? @updatedAt
+    User        User[]
+
+    @@map("providers")
+}
+
+// Currency
+model Currency {
+    id         String    @id @unique
+    name       String?   @db.VarChar()
+    code       String?   @db.VarChar()
+    symbol     String?   @db.VarChar()
+    activated  Boolean?  @default(true)
+    created_by String?   @db.VarChar()
+    updated_by String?   @db.VarChar()
+    created_at DateTime? @default(now())
+    updated_at DateTime? @updatedAt
+    Country    Country[]
+
+    @@map("currencies")
+}
+
+// Country
+model Country {
+    id          String       @id @unique
+    currency_id String?      @db.VarChar()
+    name        String       @db.VarChar()
+    code        String?      @db.VarChar()
+    timezone    String?      @db.VarChar()
+    activated   Boolean?     @default(true)
+    created_by  String?      @db.VarChar()
+    updated_by  String?      @db.VarChar()
+    created_at  DateTime?    @default(now())
+    updated_at  DateTime?    @updatedAt
+    currency    Currency?    @relation(fields: [currency_id], references: [id])
+    Influcencer Influencer[]
+    User        User[]
+
+    @@map("countries")
+}
+
+// Role
+model Role {
+    id          String       @id @unique
+    name        String       @unique
+    description String?      @db.Text()
+    permissions Json?        @db.Json()
+    activated   Boolean?     @default(true)
+    created_by  String?      @db.VarChar()
+    updated_by  String?      @db.VarChar()
+    created_at  DateTime?    @default(now())
+    updated_at  DateTime?    @updatedAt
+    Influcencer Influencer[]
+    User        User[]
+
+    @@map("roles")
+}
+
+// Membership
+model Membership {
+    id          String    @id @unique
+    name        String    @unique
+    description String?   @db.Text()
+    price       Decimal?  @db.Decimal(10, 2)
+    activated   Boolean?  @default(true)
+    created_by  String?   @db.VarChar()
+    updated_by  String?   @db.VarChar()
+    created_at  DateTime? @default(now())
+    updated_at  DateTime? @updatedAt
+    User        User[]
+
+    @@map("memberships")
+}
+
+// Influencer
+model Influencer {
+    id               String        @id @unique
+    username         String?       @db.VarChar()
+    full_name        String?       @db.VarChar()
+    bio              String?       @db.Text()
+    num_of_followers Int?          @default(0)
+    avatar           String?       @db.Text()
+    role_id          String?       @db.VarChar()
+    country_id       String?       @db.VarChar()
+    activated        Boolean?      @default(true)
+    created_by       String?       @db.VarChar()
+    updated_by       String?       @db.VarChar()
+    created_at       DateTime?     @default(now())
+    updated_at       DateTime?     @updatedAt
+    role             Role?         @relation(fields: [role_id], references: [id])
+    country          Country?      @relation(fields: [country_id], references: [id])
+    Chatroom         Chatroom[]
+    ChatMessage      ChatMessage[]
+
+    @@map("influencers")
+}
+
+// User
+model User {
+    id              String        @id @unique
+    username        String?       @db.VarChar()
+    full_name       String?       @db.VarChar()
+    email           String?       @unique @db.VarChar()
+    password        String?       @db.VarChar()
+    contact_number  String?       @db.VarChar()
+    gender          String?       @db.VarChar()
+    age             Int?          @db.Integer()
+    avatar          String?       @db.Text()
+    remarks         String?       @db.Text()
+    apple_device_id String?       @unique @db.VarChar()
+    membership_id   String?       @db.VarChar()
+    role_id         String?       @db.VarChar()
+    provider_id     String?       @db.VarChar()
+    country_id      String?       @db.VarChar()
+    activated       Boolean?      @default(true)
+    created_by      String?       @db.VarChar()
+    updated_by      String?       @db.VarChar()
+    created_at      DateTime?     @default(now())
+    updated_at      DateTime?     @updatedAt
+    role            Role?         @relation(fields: [role_id], references: [id])
+    country         Country?      @relation(fields: [country_id], references: [id])
+    membership      Membership?   @relation(fields: [membership_id], references: [id])
+    provider        Provider?     @relation(fields: [provider_id], references: [id])
+    Chatroom        Chatroom[]
+    ChatMessage     ChatMessage[]
+
+    @@map("users")
+}
+
+// Password Reset
+model PasswordReset {
+    id         Int       @id @default(autoincrement())
+    email      String?   @db.VarChar()
+    token      String?   @db.Text()
+    created_at DateTime? @default(now()) @db.Timestamptz(6)
+    updated_at DateTime? @updatedAt
+
+    @@map("password_resets")
+}
+
+// Chatroom
+model Chatroom {
+    id              String       @id @unique
+    user_id         String?      @db.VarChar()
+    influencer_id   String?      @db.VarChar()
+    last_message_id String?      @unique @db.VarChar()
+    activated       Boolean?     @default(true)
+    created_by      String?      @db.VarChar()
+    updated_by      String?      @db.VarChar()
+    created_at      DateTime?    @default(now())
+    updated_at      DateTime?    @updatedAt
+    user            User?        @relation(fields: [user_id], references: [id])
+    influencer      Influencer?  @relation(fields: [influencer_id], references: [id])
+    last_message    ChatMessage? @relation(fields: [last_message_id], references: [id])
+
+    @@unique([user_id, influencer_id])
+    @@map("chatrooms")
+}
+
+// ChatMessage
+model ChatMessage {
+    id            String      @id @unique
+    user_id       String?     @db.VarChar()
+    influencer_id String?     @db.VarChar()
+    chatroom_id   String?     @db.VarChar()
+    content       String?     @db.Text()
+    is_influencer Boolean?    @default(false)
+    is_seen       Boolean?    @default(false)
+    activated     Boolean?    @default(true)
+    created_by    String?     @db.VarChar()
+    updated_by    String?     @db.VarChar()
+    created_at    DateTime?   @default(now())
+    updated_at    DateTime?   @updatedAt
+    user          User?       @relation(fields: [user_id], references: [id])
+    influencer    Influencer? @relation(fields: [influencer_id], references: [id])
+    chatroom      Chatroom?
+
+    @@map("chat_messages")
+}

@@ -1,0 +1,9 @@
+{
+    "routes": {
+        "entryFile": "./src/server.ts"
+    },
+    "spec": {
+        "entryFile": "./src/server.ts",
+        "controllerPathGlobs": ["./src/modules/**/*.ts"]
+    }
+}
