@@ -1,0 +1,1 @@
+npx env-cmd --file .env.staging npx prisma generate
